@@ -1,0 +1,243 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```markdown
+---
+title: "Data Science Project: The Scent of Data"
+author: "Arwa, Marh, Layan"
+date: "2024-12-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Load required libraries
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+library(naniar)
+library(broom)
+library(patchwork)
+
+# Ensure reproducibility
+set.seed(123)
+
+# Load and clean dataset
+parfumo_data_clean <- read_csv("parfumo_data_clean.csv") %>%
+  clean_names()
+
+# Handle missing values (basic cleaning)
+parfumo_data_clean <- parfumo_data_clean %>%
+  mutate(
+    release_year = as.integer(release_year),  # Convert to integer for modeling
+    rating_value = as.numeric(rating_value),  # Ensure numeric type
+    rating_count = as.numeric(rating_count),  # Ensure numeric type
+    main_accords = replace_na(main_accords, "Unknown"),  # Replace missing accords
+    top_notes = replace_na(top_notes, "Unknown"),
+    middle_notes = replace_na(middle_notes, "Unknown"),
+    base_notes = replace_na(base_notes, "Unknown")
+  )
+
+
+# Quick inspection of the dataset
+glimpse(parfumo_data_clean)
+
+```
+
+# Introduction
+
+In this report, we analyze the Parfumo Fragrance Dataset to uncover patterns in perfume ratings and composition. Our primary goal is to understand the factors that influence user ratings and build a predictive model to estimate perfume ratings based on available attributes. This report is structured as follows:
+
+1. **Problem Statement and Background: Defining the problem and referencing related work.
+2. **Data**: Description of the dataset, variables, and potential issues.
+3. **Analysis**: Methods and tools employed to clean, explore, and model the data.
+4. **Results**: Findings presented with visualizations and tables.
+5. **Discussion**: Conclusions, limitations, and potential next steps.
+
+---
+
+# Problem Statement and Background
+
+Perfume ratings are subjective and influenced by various factors, including scent composition, release year, and user preferences. Understanding these factors can help brands tailor their products to consumer preferences.
+
+**Problem Statement**:  
+We aim to identify key drivers of perfume ratings and build a model to predict ratings based on attributes such as scent composition, perfumers, and release year.
+
+**Related Work**:
+1. Prior studies have explored the relationship between olfactory notes and user preferences, emphasizing the importance of top and base notes in lasting impressions.
+2. Predictive modeling in other domains (e.g., movies, books) demonstrates the effectiveness of structured metadata for reliable predictions.
+
+---
+
+# Data
+
+## Dataset Overview
+The dataset contains 13 variables and over 5,000 observations. Each row represents a perfume, with metadata including its name, brand, release year, scent composition (top, middle, and base notes), user ratings, and the number of ratings.
+
+## Key Variables
+- **Outcome Variable**:  
+  `Rating_Value` (continuous numeric)  
+  - Measured on a 5-point scale.
+  - Represents the average user rating.
+  - Source: Parfumo user reviews.
+
+- **Predictor Variables**:  
+  - `Release_Year` (numeric): Year of release.  
+  - `Rating_Count` (numeric): Number of user ratings.  
+  - `Main_Accords`, `Top_Notes`, `Middle_Notes`, `Base_Notes` (categorical): Scent components.  
+  - `Brand` and `Perfumers` (categorical): Metadata about the perfume's creators.  
+
+---
+
+
+## Summary of Predictor Variables
+```
+
+# Top 10 Main Accords
+parfumo_data_clean %>%
+  filter(main_accords != "Unknown") %>%  # Exclude missing accords
+  count(main_accords, sort = TRUE) %>%
+  slice_max(n, n = 10) %>%
+  ggplot(aes(x = reorder(main_accords, n), y = n)) +
+  geom_col(fill = "orchid") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Main Accords",
+    x = "Main Accord",
+    y = "Count"
+  )
+```
+
+---
+
+# Data Issues
+
+### Missing Data
+- Missing values are present in `Top_Notes`, `Middle_Notes`, and `Base_Notes`.  
+  **Mitigation**: Removed or imputed missing data for analyses.
+
+### Bias
+- User ratings may be influenced by brand reputation or availability.
+
+### Imbalanced Features
+- Some brands and perfumers are overrepresented.  
+  **Mitigation**: Normalization and balanced sampling where required.
+
+---
+
+# Analysis
+
+## Methods and Tools
+We used the following methods:
+1. **Exploratory Data Analysis (EDA)**:
+   - Visualized distributions and relationships between variables.
+2. **Linear Regression**:
+   - Built a predictive model for `Rating_Value`.
+3. **Feature Importance**:
+   - Used correlation and regression coefficients to identify key predictors.
+
+---
+
+## Missing Values
+```{r missing-values-analysis}
+# Visualize missing data
+gg_miss_var(parfumo_data_clean) +
+  theme_minimal() +
+  labs(
+    title = "Missing Data Overview",
+    x = "Variables",
+    y = "Number of Missing Values"
+  )
+
+```
+
+---
+
+# Advanced Analysis
+
+## Summary of Outcome Variable
+```{r outcome-summary}
+# Outcome variable distribution
+parfumo_data_clean %>%
+  filter(!is.na(rating_value)) %>%
+  ggplot(aes(x = rating_value)) +
+  geom_histogram(binwidth = 0.1, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Perfume Ratings",
+    x = "Rating Value",
+    y = "Frequency"
+  )
+
+```
+
+## Summary of Predictor Variables
+```{r predictor-summary}
+# Distribution of predictor variables
+# Release Year
+parfumo_data_clean %>%
+  filter(!is.na(release_year)) %>%
+  ggplot(aes(x = release_year)) +
+  geom_histogram(binwidth = 5, fill = "orchid", color = "white") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Perfume Release Years",
+    x = "Release Year",
+    y = "Frequency"
+  )
+
+```
+
+---
+
+# Predicting Ratings Using Multiple Features
+```{r multiple-regression}
+# Multiple regression model
+multi_lm_model <- lm(
+  rating_value ~ rating_count + release_year + as.factor(main_accords),
+  data = parfumo_data_clean %>%
+    filter(!is.na(rating_value))  # Exclude missing values
+)
+summary(multi_lm_model)
+
+# Visualization of predicted vs. actual ratings
+parfumo_data_clean <- parfumo_data_clean %>%
+  mutate(predicted_rating = predict(multi_lm_model, newdata = .))
+
+ggplot(parfumo_data_clean, aes(x = rating_value, y = predicted_rating)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(
+    title = "Actual vs Predicted Ratings",
+    x = "Actual Ratings",
+    y = "Predicted Ratings"
+  )
+
+```
+
+---
+
+# Discussion
+
+### Conclusions
+- Perfume ratings are strongly influenced by the number of reviews.
+- Certain scent families consistently receive higher ratings.
+
+### Limitations
+- Data is sourced from a single platform, limiting generalizability.
+- Missing data in olfactory notes may obscure the influence of specific components.
+
+### Next Steps
+1. Incorporate user demographics or review text for deeper insights.
+2. Develop advanced predictive models, such as Random Forest or Gradient Boosting.
+3. Implement a `shiny` app for interactive exploration of perfumes.
+
+```
+
+---
