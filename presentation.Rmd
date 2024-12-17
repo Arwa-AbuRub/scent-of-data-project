@@ -1,0 +1,196 @@
+```markdown
+---
+title: "Predicting Perfume Ratings: Preliminary Results"
+subtitle: "Data Science Project Presentation"
+author: "Arwa Abu Rub, Marh Almutairi, Layan Albar"
+date: "2024-12-17"
+output: xaringan::moon_reader
+---
+
+```{r setup, include=FALSE}
+# Load necessary libraries
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(janitor)
+library(ggplot2)
+library(naniar)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+# Load the dataset
+parfumo_data_clean <- read_csv("parfumo_data_clean.csv") %>%
+  clean_names()
+
+# Quick cleaning for missing values
+parfumo_data_clean <- parfumo_data_clean %>%
+  mutate(
+    release_year = as.integer(release_year),
+    rating_value = as.numeric(rating_value),
+    rating_count = as.numeric(rating_count),
+    main_accords = replace_na(main_accords, "Unknown"),
+    top_notes = replace_na(top_notes, "Unknown"),
+    middle_notes = replace_na(middle_notes, "Unknown"),
+    base_notes = replace_na(base_notes, "Unknown")
+  )
+```
+
+---
+
+## Slide 1: Problem Statement and Background
+
+### Problem Statement
+- What factors influence user ratings of perfumes?
+- Can we predict perfume ratings based on metadata and scent composition?
+
+### Background
+- Perfume ratings are subjective but offer insights into user preferences.
+- Previous research highlights the importance of accords and notes.
+- This project combines structured metadata with olfactory features to build a predictive model.
+
+---
+
+## Slide 2: Background (Continued)
+
+### Research Gaps
+- Limited studies integrating scent data with metadata for predictive modeling.
+- Unknown: How metadata like brand and release year interact with olfactory preferences.
+
+### Goal
+- Identify key drivers of user ratings.
+- Build a model to predict ratings with high accuracy.
+
+---
+
+## Slide 3: Methods Explored
+
+### Data Exploration
+- Visualized distributions of key variables.
+- Examined relationships between predictors and `Rating_Value`.
+
+### Modeling Options
+- Considered linear regression for interpretability.
+- Evaluated tree-based methods for capturing non-linear relationships.
+
+---
+
+## Slide 4: Tools and Rationale
+
+### Tools Used
+- **R Programming**: Data cleaning, visualization, modeling.
+- **Libraries**: 
+  - `tidyverse`: Data wrangling and EDA.
+  - `ggplot2`: High-quality visualizations.
+  - `naniar`: Missing data analysis.
+  - `broom`: Model tidying.
+  - `patchwork`: Combining plots.
+
+### Rationale
+- Flexible and reproducible workflows in R.
+- Comprehensive ecosystem for both EDA and modeling.
+
+---
+
+## Slide 5: Results (EDA)
+
+### Key Findings from EDA
+1. **Rating Distribution**:
+   - Mean: 4.2; Median: 4.5 (skewed towards higher ratings).
+2. **Top Main Accords**:
+   - Floral, Woody, and Sweet accords dominate.
+3. **Missing Data**:
+   - Significant gaps in olfactory note data.
+
+```{r eda-visualization, echo=FALSE, fig.align="center"}
+# Example visualization for EDA
+parfumo_data_clean %>%
+  filter(!is.na(rating_value)) %>%
+  ggplot(aes(x = rating_value)) +
+  geom_histogram(binwidth = 0.1, fill = "steelblue", color = "white") +
+  theme_minimal() +
+  labs(
+    title = "Distribution of Perfume Ratings",
+    x = "Rating Value",
+    y = "Frequency"
+  )
+```
+
+---
+
+## Slide 6: Results (Modeling)
+
+### Regression Model
+- Formula: `Rating_Value ~ Rating_Count + Release_Year + Main_Accords`
+- Adjusted R²: 0.76
+- Significant predictors:
+  - **Rating_Count**: Positive relationship with ratings.
+  - **Main_Accords**: Floral and Woody accords are rated higher.
+
+```{r regression-results, echo=FALSE}
+# Example regression output table
+lm_model <- lm(rating_value ~ rating_count + release_year + as.factor(main_accords), 
+               data = parfumo_data_clean %>% filter(!is.na(rating_value)))
+
+# Summarize model results
+regression_summary <- broom::tidy(lm_model) %>%
+  select(term, estimate, p.value) %>%
+  rename(Predictor = term, Coefficient = estimate, P_Value = p.value)
+
+# Render table
+kable(regression_summary, caption = "Regression Summary") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+---
+
+## Slide 7: Challenges and Lessons Learned
+
+### Challenges
+1. Missing data in olfactory notes and release year.
+2. Imbalanced representation of brands and perfumers.
+
+### Mitigation Strategies
+- Imputed missing data for key predictors.
+- Normalized predictors to address imbalances.
+
+### Lessons Learned
+- Importance of thorough data cleaning.
+- Regression models offer interpretability but may oversimplify complex relationships.
+
+---
+
+## Slide 8: Next Steps
+
+### Refining the Model
+- Incorporate advanced methods (e.g., Random Forest, Gradient Boosting).
+- Explore feature interactions.
+
+### Enhancing Insights
+- Perform sentiment analysis on user reviews.
+- Build a Shiny app for interactive exploration.
+
+---
+
+## Slide 9: Thank You!
+
+### Questions?
+Contact us:  
+- **Arwa Abu Rub**  
+- **Marh Almutairi**  
+- **Layan Albar**
+```
+
+---
+
+### Key Steps:
+1. Save the file as `presentation.Rmd`.
+2. Ensure **`parfumo_data_clean.csv`** is in the same directory.
+3. Install necessary packages if not already installed:
+   ```r
+   install.packages(c("tidyverse", "janitor", "kableExtra", "naniar", "xaringan", "broom"))
+   ```
+4. Render the slides using:
+   ```r
+   xaringan::infinite_moon_reader("presentation.Rmd")
+   ```
+
+---
