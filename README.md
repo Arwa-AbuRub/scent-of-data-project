@@ -73,9 +73,11 @@ The project utilizes the following tools and libraries:
 2. Open the R Markdown file (`DatascienceArwa.Rmd`) in RStudio.
 3. Install required R packages:
    ```r
-   install.packages(c("tidyverse", "janitor", "ggplot2", "naniar", "broom", "patchwork"))
+   install.packages(c("tidyverse", "janitor", "ggplot2", "naniar", "broom",  "xaringan", "kableExtra", "patchwork"))
    ```
 4. Run the R Markdown file to reproduce the analysis and results.
+5. Open the file  `presentation.Rmd`.
+6. Run the presentation file
 
 ---
 
